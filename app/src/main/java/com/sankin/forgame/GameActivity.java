@@ -6,12 +6,16 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.media.AudioManager;
+import android.media.MediaPlayer;
+import android.media.SoundPool;
 import android.os.Bundle;
 import android.widget.ImageView;
 
 import com.sankin.forgame.ContentThread.MoveThread;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 
@@ -22,6 +26,10 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
     private List<MoveThread> list = new ArrayList<>(); //敌人序列
     private final static int MAX_ATTACKER = 10; //最大敌人数量
     private final static double STANDARD = Math.acos(Math.PI/18.0);
+
+    //插入背景乐
+    private MediaPlayer mediaPlayer;
+    public HashMap<Integer, Integer> soundMap = new HashMap<Integer, Integer>();
 
 
     @SuppressWarnings("deprecation")
@@ -34,6 +42,11 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         gyroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
 
+        //播放背景音乐
+        mediaPlayer = MediaPlayer.create(this, R.raw.shoot);
+
+        mediaPlayer.setLooping(true);
+        mediaPlayer.start();
     }
 
     @Override
@@ -89,6 +102,7 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
             if (CalculationAngle(image)) {
                 move.setFlag(false);
                 list.remove(move);
+                list.notifyAll();
             }
         }
     }
@@ -96,7 +110,6 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
     /*
         计算夹角
      */
-
     public boolean CalculationAngle(ImageView imageView) {
         synchronized (imageView) {
             float[] point = new float[3];
@@ -147,7 +160,6 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
             MoveThread move = new MoveThread(attacker);
             move.start();
             list.add(move);
-            list.notifyAll();
         }
     }
 }
