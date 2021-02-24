@@ -1,4 +1,4 @@
-package com.sankin.forgame.ContentThread;
+package com.sankin.forgame.Threads;
 
 import android.widget.ImageView;
 
@@ -27,20 +27,20 @@ public class MoveThread extends Thread{
             synchronized (imageView) {
                 //随机移动
                 Random random = new Random();
-                int dis = random.nextInt() % 3 - 1;
-                int dir = random.nextInt() % 3;
+                float[] point = new float[3];
+                point[0] = random.nextInt(100) + 200;
+                point[1] = random.nextInt(100) + 200;
+                point[2] = random.nextInt(100) + 200;
                 //做移动操作
-                if (dir == 0) imageView.setX(imageView.getX() + dis);
-                else if (dir == 1) imageView.setY(imageView.getY() + dis);
-                else imageView.setZ(imageView.getZ() + dis);
-
+                imageView.setX(point[0]);
+                imageView.setY(point[1]);
+                imageView.setZ(point[2]);
             }
             try {
-                sleep(1000);
+                sleep(100);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
     }
-
 }
