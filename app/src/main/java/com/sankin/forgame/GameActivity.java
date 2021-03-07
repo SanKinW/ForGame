@@ -2,6 +2,7 @@ package com.sankin.forgame;
 
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
 
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -11,6 +12,7 @@ import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Vibrator;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageView;
@@ -24,17 +26,20 @@ import java.util.Random;
 
 public class GameActivity extends AppCompatActivity implements SensorEventListener {
     private ImageView user;
-    private int lastX; //手指最后的位置
+    private View whole;
+    //private int lastX; //手指最后的位置
 
     private float[] angel = new float[3];  //陀螺仪数据
     private SensorManager sensorManager = null; //传感器管理
     private Sensor gyroSensor = null;   //陀螺仪
     private List<MoveThread> list = new LinkedList<>(); //敌人序列
+    private boolean is_defense = false;
 
     //插入背景乐
     private MediaPlayer mediaPlayer;
 
     private int lifeValue = 666; //初始生命值
+    //private boolean isShoot = false;
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     @SuppressWarnings("deprecation")
@@ -44,24 +49,52 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
         setContentView(R.layout.activity_game);
 
         user = findViewById(R.id.user_photo);
-        user.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                user.setX(event.getX());
-                user.setY(event.getY());
-                user.invalidate();
-                return true;
-            }
-        });
+        whole = findViewById(R.id.whole);
 
         //获取传感器信息
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         gyroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
 
         mediaPlayer = MediaPlayer.create(this, R.raw.shoot);
-        mediaPlayer.setLooping(true);
-        mediaPlayer.getPlaybackParams().setSpeed(1f);
-        mediaPlayer.start();
+
+        whole.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                synchronized (list) {
+                    synchronized (angel) {
+                        checkDirection();
+                        mediaPlayer.start();
+                    }
+                }
+            }
+        });
+
+        whole.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                is_defense = true;
+                try {
+                    Thread.sleep(1000);
+                }catch (Exception e) {
+                    e.printStackTrace();
+                }
+                is_defense = false;
+                return true;
+            }
+        });
+
+        whole.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                if (event.getAction() == MotionEvent.ACTION_MOVE) {
+                    user.setX(event.getX());
+                    user.setY(event.getY());
+                    user.invalidate();
+
+                }
+                return false;
+            }
+        });
 
         //产生敌人
         new Thread(){
@@ -109,29 +142,36 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
         //为传感器注册监听器
         sensorManager.registerListener(this, gyroSensor,
                 SensorManager.SENSOR_DELAY_NORMAL);
-        mediaPlayer.setLooping(true);
-        mediaPlayer.getPlaybackParams().setSpeed(1f);
-        mediaPlayer.start();
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        //回收资源
-        mediaPlayer.pause();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        MediaPlayer over = MediaPlayer.create(this, R.raw.over);
+        over.start();
+        finish();
     }
 
     //检查玩家是否被敌人的子弹命中
     public void isBeShoot() {
         synchronized (list) {
-            for (MoveThread move : list) {
-                ImageView image = move.getImageView();
-                //检查角度，夹角小于10°认为瞄准，杀死该敌人
-                if (image.getX() - user.getX() > -5.0 && image.getX() - user.getX() < 5.0) {
-                    System.out.println("被击中了！---------------");
-                    lifeValue = lifeValue - 3;
+            if (!is_defense) {
+                MediaPlayer shoot_down = MediaPlayer.create(this, R.raw.shooted);
+                for (MoveThread move : list) {
+                    ImageView image = move.getImageView();
+                    //检查角度，夹角小于10°认为瞄准，杀死该敌人
+                    if (image.getX() - user.getX() > -5.0 && image.getX() - user.getX() < 5.0) {
+                        Log.d("attacker shoot", "被敌人击中");
+                        shoot_down.start();
+                        lifeValue = lifeValue - 3;
+                    }
+                    if (lifeValue <= 0) onDestroy();
                 }
-                if (lifeValue <= 0) onStop();
             }
         }
     }
@@ -141,13 +181,12 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
     @Override
     public void onSensorChanged(SensorEvent event) {
         if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
-            synchronized (list) {
+            synchronized (angel) {
                 angel[0] = event.values[0]; //x
                 angel[1] = event.values[1]; //y
                 angel[2] = event.values[2]; //z
-                checkDirection();
                 try {
-                    Thread.sleep(1000);
+                    Thread.sleep(100);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -160,13 +199,14 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
      */
     @RequiresApi(api = Build.VERSION_CODES.M)
     public void checkDirection() {
+        MediaPlayer shoot = MediaPlayer.create(this, R.raw.kill);
         for (MoveThread move : list) {
             ImageView image = move.getImageView();
             //检查角度，夹角小于5°认为瞄准，杀死该敌人
             if (CalculationAngle(image)) {
-                System.out.println("杀死敌人！---------------");
                 Vibrator vibrator = (Vibrator)this.getSystemService(this.VIBRATOR_SERVICE);
                 vibrator.vibrate(100);
+                shoot.start();
                 move.setFlag(false);
                 list.remove(move);
                 list.notifyAll();
@@ -192,6 +232,7 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
             double multi = point[0] * angel[0] + point[1] * angel[1] + point[2] * angel[2];
             double includedAngle = Math.acos(multi / (dis1 * dis2));
             if (Double.compare(includedAngle, Constant.STANDARD) < 0 && Double.compare(includedAngle, -Constant.STANDARD) > 0) {
+                mediaPlayer.getPlaybackParams().setSpeed(6f);
                 return true;
             }
             else {
@@ -249,4 +290,5 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
             list.add(move);
         }
     }
+
 }

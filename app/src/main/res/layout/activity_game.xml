@@ -8,7 +8,11 @@
     android:background="@drawable/ic_game_back"
     android:padding="10dp"
     android:id="@+id/game_main">
-
+    <View android:clickable="true"
+        android:id="@+id/whole"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+    </View>
 
     <ImageView
         android:id="@+id/user_photo"
