@@ -1,15 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity"
-    android:id="@+id/first">
-        <View
-            android:id="@+id/start_view"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@drawable/ic_start_back">
-        </View>
+    android:id="@+id/first"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="@drawable/ic_start_back1"
+    android:padding="15dp"
+    >
+<!--        <View-->
+<!--            android:id="@+id/start_view"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="match_parent"-->
+<!--            android:background="@drawable/ic_start_back1"-->
+<!--            >-->
+                <TextView
+                    android:id="@+id/tv_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="60dp"
+                    android:background="@drawable/bg_start_btn"
+                    android:text="长按开始游戏"
+                    android:textColor="@color/white"
+                    android:textSize="24sp"
+                    android:gravity="center"
+
+                    >
+                </TextView>
+
+<!--        </View>-->
 </LinearLayout>

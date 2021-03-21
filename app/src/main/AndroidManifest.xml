@@ -11,6 +11,10 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.ForGame">
+        <activity
+            android:name=".HealthValueActivity"
+            android:label="@string/title_activity_health_value"
+            android:theme="@style/Theme.ForGame.NoActionBar"/>
         <activity android:name=".GameActivity"  android:screenOrientation="portrait"></activity>
         <activity android:name=".MainActivity">
             <intent-filter>
