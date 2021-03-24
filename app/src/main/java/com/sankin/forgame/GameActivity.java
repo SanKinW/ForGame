@@ -27,6 +27,7 @@ import android.widget.RelativeLayout;
 
 import com.sankin.forgame.Threads.MoveThread;
 import com.sankin.forgame.Util.Constant;
+import com.sankin.forgame.Util.Format;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -35,7 +36,7 @@ import java.util.Random;
 public class GameActivity extends AppCompatActivity implements SensorEventListener {
     private ImageView user; //用户
     private View whole;  //整个view
-    private RelativeLayout main_container;//容器 xml也就这一个控件
+    //private RelativeLayout main_container;//容器 xml也就这一个控件
     //private int lastX; //手指最后的位置
 
     private float[] angel = new float[3];  //陀螺仪数据
@@ -54,10 +55,10 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
     private int width;//屏幕宽度
     private int duration;//动画时间
     private int left;//距离左边界的距离
-    private GameActivity activity;
+    //private GameActivity activity;
     private Bitmap bitmap;//鲜花的对象
     private ImageView imageView;
-    private MySurfaceView mySurfaceView;
+    //private MySurfaceView mySurfaceView;
 
     //定义两个矩形的宽高坐标
     private float x1 = 0, y1 = 0, w1 = 0, h1 = 0;
@@ -91,11 +92,44 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
         user = findViewById(R.id.iv_gun);
         whole = findViewById(R.id.v_bg);
         imageView = findViewById(R.id.iv_health);
+        //main_container = findViewById(R.id.main_container);
         user.setImageResource(image[imageCount]);
         whole.setOnTouchListener(new onDoubleClick());
+        whole.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                is_defense = true;
+                try {
+                    Thread.sleep(1000);
+                }catch (Exception e) {
+                    e.printStackTrace();
+                }
+                is_defense = false;
+            }
+        });
 
-        activity = this;
-        main_container = (RelativeLayout) findViewById(R.id.main_container);
+        whole.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                synchronized (list) {
+                    synchronized (angel) {
+                        int count = 5;
+                        while (count-- > 0) {
+                            Log.d("我方", "射击");
+                            checkDirection();
+                            mediaPlayer.start();
+                            try {
+                                Thread.sleep(100);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+                }
+                return true;
+            }
+        });
+        //activity = this;
 
         Point p = new Point();
         //获取窗口管理器
@@ -109,7 +143,6 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
         bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.ic_health_value);
         mhandler.post(runnable);//start
 
-
         //获取传感器信息
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         gyroSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
@@ -117,45 +150,6 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
         mediaPlayer = MediaPlayer.create(this, R.raw.shoot);
         mp1 =MediaPlayer.create(this, R.raw.sound_pao);
         mp2 =MediaPlayer.create(this, R.raw.sound_health);
-
-        whole.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                synchronized (list) {
-                    synchronized (angel) {
-                        checkDirection();
-                        mediaPlayer.start();
-                    }
-                }
-            }
-        });
-
-        whole.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View v) {
-                is_defense = true;
-                try {
-                    Thread.sleep(1000);
-                }catch (Exception e) {
-                    e.printStackTrace();
-                }
-                is_defense = false;
-                return true;
-            }
-        });
-
-        whole.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                if (event.getAction() == MotionEvent.ACTION_MOVE) {
-                    user.setX(event.getX());
-                    user.setY(event.getY());
-                    user.invalidate();
-
-                }
-                return false;
-            }
-        });
 
         //产生敌人
         new Thread(){
@@ -172,13 +166,14 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
             }
         }.start();
 
+        //是否被敌人击中
         new Thread(){
             @Override
             public void run(){
                 while(true){
                     try{
                         isBeShoot();
-                        Thread.sleep(100);
+                        Thread.sleep(1000);
                     }catch (InterruptedException e){
                         e.printStackTrace();
                     }
@@ -194,6 +189,8 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
         //解除传感器监听
         sensorManager.unregisterListener(this);
         mediaPlayer.pause();
+        mp1.pause();
+        mp2.pause();
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
@@ -216,7 +213,7 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
         y2 = imageView.getTop();
         boolean ic = isCollsion();
         Log.d("是否碰撞", ic+"");
-        if(ic || imageView.getTranslationY() >= height){ //mySurfaceView.isCollsion() ||
+        if(ic || imageView.getTranslationY() >= height){
             mhandler.removeCallbacks(runnable);
             mhandler = null;
             bitmap.recycle();
@@ -236,7 +233,7 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
                     ImageView image = move.getImageView();
                     //检查角度，夹角小于10°认为瞄准，杀死该敌人
                     if (image.getX() - user.getX() > -5.0 && image.getX() - user.getX() < 5.0) {
-                        Log.d("attacker shoot", "被敌人击中");
+                        Log.d("敌人射击", "被敌人击中");
                         shoot_down.start();
                         lifeValue = lifeValue - 3;
                     }
@@ -270,19 +267,22 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
     @RequiresApi(api = Build.VERSION_CODES.M)
     public void checkDirection() {
         MediaPlayer shoot = MediaPlayer.create(this, R.raw.kill);
+        MoveThread temp = null;
         for (MoveThread move : list) {
             ImageView image = move.getImageView();
             //检查角度，夹角小于5°认为瞄准，杀死该敌人
             if (CalculationAngle(image)) {
+                Log.d("我方", "击中敌人");
                 Vibrator vibrator = (Vibrator)this.getSystemService(this.VIBRATOR_SERVICE);
                 vibrator.vibrate(100);
                 shoot.start();
                 move.setFlag(false);
-                list.remove(move);
+                temp = move;
                 list.notifyAll();
                 break;
             }
         }
+        if (temp != null) list.remove(temp);
     }
 
     /*
@@ -295,8 +295,8 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
             point[0] = imageView.getX();
             point[1] = imageView.getY();
             point[2] = imageView.getZ();
-            System.out.println("敌人坐标" + point[0] + " " + point[1] + " " + point[2]);
-            System.out.println("传感器坐标" + angel[0] + " " + angel[1] + " " + angel[2]);
+            Log.d("敌人坐标 ",  point[0] + " " + point[1] + " " + point[2]);
+            Log.d("传感器坐标" ,angel[0] + " " + angel[1] + " " + angel[2]);
             double dis1 = Math.sqrt(point[0] * point[0] + point[1] * point[1] + point[2] * point[2]);
             double dis2 = Math.sqrt(angel[0] * angel[0] + angel[1] * angel[1] + angel[2] * angel[2]);
             double multi = point[0] * angel[0] + point[1] * angel[1] + point[2] * angel[2];
@@ -317,14 +317,14 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
     @RequiresApi(api = Build.VERSION_CODES.M)
     public void changeMusicFrequency(double angle) {
         if (Double.compare(angle, Constant.STANDARD_30) < 0) {
-            System.out.println("0-30----------");
+            Log.d("角度","0-30----------");
             mediaPlayer.getPlaybackParams().setSpeed(5f);
         }
         else if (Double.compare(angle, Constant.STANDARD_60) < 0) {
-            System.out.println("30-60----------");
+            Log.d("角度","30-60----------");
             mediaPlayer.getPlaybackParams().setSpeed(2.5f);
         }else {
-            System.out.println("60-90----------");
+            Log.d("角度","60-90----------");
             mediaPlayer.getPlaybackParams().setSpeed(1f);
         }
     }
@@ -344,10 +344,9 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
                     e.printStackTrace();
                 }
             }
-            System.out.println("-------generate attacker"+list.size());
+            Log.d("序号","-------generate attacker"+list.size());
             //随机生成敌人位置
             ImageView attacker = new ImageView(GameActivity.this);
-            attacker.setImageResource(R.drawable.ic_attacker);
             int[] point = new int[3];
             for (int i = 0; i < 3; ++i) {
                 point[i] = new Random().nextInt(100) + 200;
@@ -362,21 +361,15 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
     }
 
     private void randomFlower() {
-
-//        main_container.addView(imageView);
         imageView.setImageBitmap(bitmap);
-//        imageView.setScaleType(ImageView.ScaleType.FIT_XY);
         duration = new Random().nextInt(2000) + 2000;
         left = random.nextInt(width - 200) + 100;
 
-        RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams
-                (100, 100);
+        RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(100, 100);
         params.setMargins(left, 0, 0, 0);
         imageView.setLayoutParams(params);
 
         imageView.setVisibility(View.VISIBLE);
-
-
         ObjectAnimator objectAnimator = ObjectAnimator.ofFloat(imageView, "translationY", 0, 6000);
         objectAnimator.setDuration(6000).start();
         y2 = imageView.getTop();
@@ -389,6 +382,7 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
         Log.d("是否碰撞", ic+"");
         if(ic || imageView.getTranslationY() >= height){
             imageView.setVisibility(View.INVISIBLE);
+            lifeValue += 20;
         }
     }
 
@@ -445,7 +439,7 @@ public class GameActivity extends AppCompatActivity implements SensorEventListen
             }
 //            isCollsion();
             mp1.start();
-            return true;
+            return false;
         }
     }
 
