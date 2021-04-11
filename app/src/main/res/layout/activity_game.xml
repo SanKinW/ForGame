@@ -27,6 +27,15 @@
             android:gravity="center_horizontal"
             >
         </ImageView>
+        <ImageView
+            android:id="@+id/iv_attacker"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/ic_attacker"
+            android:visibility="invisible"
+            android:layout_alignParentTop="true"
+            android:gravity="center_horizontal">
+        </ImageView>
 
         <ImageView
             android:id="@+id/iv_gun"
